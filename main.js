@@ -33,12 +33,68 @@ const stripGeo = new THREE.PlaneGeometry(80, ROW).rotateX(-Math.PI / 2);
 const bodyGeo = new THREE.BoxGeometry(1.8, 0.5, 1);
 const cabinGeo = new THREE.BoxGeometry(0.9, 0.4, 0.85);
 const logGeo = new THREE.CylinderGeometry(0.55, 0.55, 1, 12).rotateZ(Math.PI / 2);
-const wheelGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.2, 12).rotateX(Math.PI / 2);   // eje en Z
-const wheelMat = mat(0x111111);  
+
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(300, 300).rotateX(-Math.PI / 2), M.grass);
 ground.position.y = -0.5;
 scene.add(ground);
+
+// Decoración (nivel 1)
+const EDGE = 12;     
+const trunkGeo = new THREE.CylinderGeometry(0.15, 0.2, 0.8, 6);
+const crownGeo = new THREE.ConeGeometry(0.8, 1.8, 7);
+const flowerGeo = new THREE.SphereGeometry(0.08, 6, 6);
+const trunkMat = mat(0x6d4c41);
+const crownMats = [0x2e7d32, 0x388e3c, 0x1b5e20].map(mat);
+const flowerMats = [0xffffff, 0xffeb3b, 0xf06292, 0xba68c8].map(mat);
+const dashGeo = new THREE.PlaneGeometry(0.9, 0.12).rotateX(-Math.PI / 2);
+const dashMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+function makeTree() {
+    const tree = new THREE.Group();
+    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+    trunk.position.y = 0.4;
+    const crown = new THREE.Mesh(crownGeo, crownMats[Math.floor(Math.random() * crownMats.length)]);
+    crown.position.y = 1.7;
+    tree.add(trunk, crown);
+    tree.scale.setScalar(0.8 + Math.random() * 0.7);
+    return tree;
+}
+
+function decorate(group) {
+    // Árboles en los costados
+    for (const side of [-1, 1]) {
+        const n = 2 + Math.floor(Math.random() * 3);
+        for (let k = 0; k < n; k++) {
+            const tree = makeTree();
+            tree.position.set(side * (EDGE + Math.random() * 12), 0, (Math.random() - 0.5) * 1.4);
+            group.add(tree);
+        }
+    }
+    // Flores en la zona jugable 
+    for (let k = 0; k < 10; k++) {
+        const flower = new THREE.Mesh(flowerGeo, flowerMats[Math.floor(Math.random() * flowerMats.length)]);
+        flower.position.set((Math.random() - 0.5) * 20, 0.08, (Math.random() - 0.5) * 1.6);
+        group.add(flower);
+    }
+}
+
+function makeDashes() {                           
+    const dashes = new THREE.InstancedMesh(dashGeo, dashMat, 30);
+    const m = new THREE.Matrix4();
+    for (let k = 0; k < 30; k++) {
+        dashes.setMatrixAt(k, m.makeTranslation(-29 + k * 2, 0.02, ROW / 2));
+    }
+    dashes.frustumCulled = false;
+    return dashes;
+}
+
+// Carros y camiones 
+const tireGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.2, 12).rotateX(Math.PI / 2);
+const tireMat = mat(0x111111);
+const lampGeo = new THREE.BoxGeometry(0.05, 0.12, 0.2);
+const lampMat = new THREE.MeshBasicMaterial({ color: 0xffff99 });
+const cargoMat = mat(0xeeeeee);
 
 // Estado del juego 
 const world = new THREE.Group();                  
@@ -80,25 +136,41 @@ const chicken = await loadCharacter('models/gallina.glb', -Math.PI/2);
 const frog = await loadCharacter('models/rana.glb', Math.PI);
 
 
-
-function makeCar(dir) {
+function makeCar(dir, length = 1.8) {
+    const truck = length > 2;
     const car = new THREE.Group();
-    const body = new THREE.Mesh(bodyGeo, carColors[Math.floor(Math.random() * carColors.length)]);
-    body.position.y = 0.45;
-    const cabin = new THREE.Mesh(cabinGeo, M.glass);
-    cabin.position.set(-0.1, 0.9, 0);
-    car.add(body, cabin);
 
-    
-    for (const x of [-0.6, 0.6]) {
+    const body = new THREE.Mesh(bodyGeo, carColors[Math.floor(Math.random() * carColors.length)]);
+    body.scale.x = length / 1.8;
+    body.position.y = 0.45;
+    car.add(body);
+
+    const cabin = new THREE.Mesh(cabinGeo, M.glass);
+    cabin.position.set(truck ? length / 2 - 0.6 : -0.1, 0.9, 0);   // camión: cabina al frente
+    car.add(cabin);
+
+    if (truck) {                                  // caja de carga
+        const cargo = new THREE.Mesh(new THREE.BoxGeometry(length - 1.5, 0.8, 0.95), cargoMat);
+        cargo.position.set(-length / 2 + (length - 1.5) / 2, 1.1, 0);
+        car.add(cargo);
+    }
+
+    const wheelXs = truck ? [-length / 2 + 0.4, 0, length / 2 - 0.4] : [-0.6, 0.6];
+    for (const x of wheelXs) {
         for (const z of [-0.5, 0.5]) {
-            const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+            const wheel = new THREE.Mesh(tireGeo, tireMat);
             wheel.position.set(x, 0.22, z);
             car.add(wheel);
         }
     }
 
-    car.rotation.y = dir === 1 ? 0 : Math.PI;     
+    for (const z of [-0.3, 0.3]) {                // faros delanteros
+        const lamp = new THREE.Mesh(lampGeo, lampMat);
+        lamp.position.set(length / 2 + 0.01, 0.5, z);
+        car.add(lamp);
+    }
+
+    car.rotation.y = dir === 1 ? 0 : Math.PI;     // el frente apunta hacia donde va
     return car;
 }
 
@@ -118,8 +190,15 @@ function makeRow(i) {
     const safe = i < 2 || (!rows[i - 1].safe && Math.random() < 0.3);
     const row = { group, safe, things: [] };
 
-    group.add(new THREE.Mesh(stripGeo, safe ? M.grass : level === 1 ? M.road : M.water));
-    if (safe) return row;
+    const strip = new THREE.Mesh(stripGeo, safe ? M.grass : level === 1 ? M.road : M.water);
+    strip.receiveShadow = true;
+    group.add(strip);
+
+    if (safe) {
+        if (level === 1) decorate(group);             // árboles y flores
+        return row;
+    }
+    if (level === 1 && !rows[i - 1].safe) group.add(makeDashes());   // línea entre calles
 
     // Carros (nivel 1) o troncos (nivel 2) se mueven y reaparecen por el otro lado
     const river = level === 2;
@@ -127,14 +206,15 @@ function makeRow(i) {
     row.speed = river
     ? 2 + Math.random() * 2 + Math.min(i * 0.04, 3)        // troncos 
     : 5 + Math.random() * 3 + Math.min(i * 0.06, 5);         // carros 
-    row.width = river ? 2 + Math.floor(Math.random() * 3) : 1.8;                    
+    row.truck = !river && Math.random() < 0.3;
+    row.width = river ? 2 + Math.floor(Math.random() * 3) : row.truck ? 3.2 : 1.8;                    
     const spacing = row.width + (river ? 2.5 + Math.random() : 6 + Math.random() * 6);
     const count = Math.ceil(50 / spacing);
     row.period = count * spacing;
     const offset = Math.random() * spacing;
 
     for (let k = 0; k < count; k++) {
-        const thing = river ? makeLog(row.width) : makeCar(row.dir);
+        const thing = river ? makeLog(row.width) : makeCar(row.dir, row.width);
         thing.position.x = -row.period / 2 + k * spacing + offset;
         group.add(thing);
         row.things.push(thing);
