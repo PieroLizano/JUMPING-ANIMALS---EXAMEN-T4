@@ -5,13 +5,13 @@
     <title>Jumping Animals</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: sans-serif; }
-        #menu {
+        #menu, #gameover {
             position: fixed; inset: 0; color: white;
             display: flex; flex-direction: column;
             align-items: center; justify-content: center; gap: 16px;
             background: rgba(0, 0, 0, 0.6);
         }
-        #menu button {
+        #menu button, #gameover button {
             width: 260px; padding: 14px; font-size: 1.1rem;
             border: 0; border-radius: 8px; cursor: pointer; background: #ffd54f;
         }
@@ -20,6 +20,11 @@
             font-size: 1.5rem; font-weight: bold; text-shadow: 0 2px 4px #0008;
         }
         .hidden { display: none !important; }
+
+        #finalScore { font-size: 1.3rem; margin: 0; }
+        #recordMsg { font-size: 1.4rem; font-weight: bold; margin: 0 0 8px; }
+        #recordMsg.record { color: #ffd54f; }
+
     </style>
     <script type="importmap">
     {
@@ -37,6 +42,13 @@
         <h1>Jumping Animals</h1>
         <button data-level="1">Nivel 1: La carretera</button>
         <button data-level="2">Nivel 2: El río</button>
+    </div>
+    <div id="gameover" class="hidden">
+    <h1>¡Game over!</h1>
+    <p id="finalScore"></p>
+    <p id="recordMsg"></p>
+    <button id="retry">Jugar de nuevo</button>
+    <button id="toMenu">Menú</button>
     </div>
 
     <script type="module" src="main.js"></script>

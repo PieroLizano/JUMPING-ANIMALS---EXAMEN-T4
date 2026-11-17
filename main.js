@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-// --- Escena, cámara y luces ---
+// Escena, cámara y luces
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
 
@@ -23,7 +23,7 @@ addEventListener('resize', () => {
     renderer.setSize(innerWidth, innerHeight);
 });
 
-// --- Materiales y geometrías (se crean una sola vez) ---
+// Materiales y geometrías 
 const ROW = 2;                                    // alto de cada fila = tamaño del paso
 const mat = (color) => new THREE.MeshStandardMaterial({ color });
 const M = { grass: mat(0x66bb6a), road: mat(0x424242), water: mat(0x1e88e5), log: mat(0x8d6e63), glass: mat(0xcfe8ff) };
@@ -40,8 +40,8 @@ const ground = new THREE.Mesh(new THREE.PlaneGeometry(300, 300).rotateX(-Math.PI
 ground.position.y = -0.5;
 scene.add(ground);
 
-// --- Estado del juego ---
-const world = new THREE.Group();                  // aquí viven las filas
+// Estado del juego 
+const world = new THREE.Group();                  
 scene.add(world);
 
 let level = 1;
@@ -50,10 +50,10 @@ let rows = [];
 let score = 0;                                    // fila más lejana alcanzada
 const best = { 1: 0, 2: 0 };
 
-// --- Jugador ---
+// Jugador 
 const player = new THREE.Group();
 scene.add(player);
-const target = new THREE.Vector3();               // casilla a la que va
+const target = new THREE.Vector3();               
 
 
 async function loadCharacter(url, rotationY) {
@@ -89,7 +89,7 @@ function makeCar(dir) {
     cabin.position.set(-0.1, 0.9, 0);
     car.add(body, cabin);
 
-    // Cuatro ruedas
+    
     for (const x of [-0.6, 0.6]) {
         for (const z of [-0.5, 0.5]) {
             const wheel = new THREE.Mesh(wheelGeo, wheelMat);
@@ -114,14 +114,14 @@ function makeRow(i) {
     group.position.z = -i * ROW;
     world.add(group);
 
-    // Las 2 primeras filas son seguras; luego, césped al azar (nunca 2 seguidas)
+    // Las 2 primeras filas son seguras
     const safe = i < 2 || (!rows[i - 1].safe && Math.random() < 0.3);
     const row = { group, safe, things: [] };
 
     group.add(new THREE.Mesh(stripGeo, safe ? M.grass : level === 1 ? M.road : M.water));
     if (safe) return row;
 
-    // Carros (nivel 1) o troncos (nivel 2): se mueven y reaparecen por el otro lado
+    // Carros (nivel 1) o troncos (nivel 2) se mueven y reaparecen por el otro lado
     const river = level === 2;
     row.dir = i % 2 ? 1 : -1;
     row.speed = river
@@ -158,31 +158,30 @@ function reset() {
     bestEl.textContent = best[level];
 }
 
-// --- Tamaño del movimiento y del mapa ---
+// Tamaño del movimiento y del mapa 
 const STEP_X = 2;         
 const SIDE = 10;          
 const KILL_X = SIDE + 2;  // en el río, la corriente te saca si pasas de aquí
 
-// --- Lógica de cada nivel ---
-function hitCar(row) {                            // NIVEL 1: un carro te toca
+// Lógica de cada nivel 
+function hitCar(row) {                            
     return row.things.some((car) => Math.abs(player.position.x - car.position.x) < row.width / 2 + 0.3);
 }
 
-function hitWater(row, dt) {                      // NIVEL 2: sin tronco = agua
-    // Si aún está saltando hacia o desde esta fila, no cuenta
+function hitWater(row, dt) {                     
     if (Math.abs(player.position.z - row.group.position.z) > 0.3) return false;
 
     const log = row.things.find((l) => Math.abs(player.position.x - l.position.x) < row.width / 2 + 0.1);
     if (log) {
-        const dx = row.dir * row.speed * dt;      // el tronco te arrastra
+        const dx = row.dir * row.speed * dt;      
         player.position.x += dx;
         target.x += dx;
-        return Math.abs(player.position.x) > KILL_X;   // la corriente te saca de la zona
+        return Math.abs(player.position.x) > KILL_X;   
     }
-    return player.position.distanceTo(target) < 0.3;   // solo cae si ya terminó de moverse
+    return player.position.distanceTo(target) < 0.3;   
 }
 
-// --- Actualización por frame ---
+// Actualización por frame 
 function update(dt) {
     // Mover carros / troncos
     for (const row of rows) {
@@ -205,14 +204,11 @@ function update(dt) {
     const row = rows[pr];
     if (row && !row.safe && Math.abs(player.position.z - row.group.position.z) < 0.6) {
         const dead = level === 1 ? hitCar(row) : hitWater(row, dt);
-        if (dead) {
-            best[level] = Math.max(best[level], score);
-            reset();                              // al perder, reinicia el nivel
-        }
+        if (dead) gameOver();
     }
 }
 
-// --- Controles ---
+// Controles 
 const KEYS = {
     ArrowUp: [0, -1],    KeyW: [0, -1],
     ArrowDown: [0, 1],   KeyS: [0, 1],
@@ -223,17 +219,22 @@ const KEYS = {
 addEventListener('keydown', (e) => {
     if (e.code === 'Escape') return showMenu();
 
+    if ((e.code === 'Enter' || e.code === 'Space') && state === 'gameover') {
+    e.preventDefault();
+    return startLevel(level);
+    }
+
     const d = KEYS[e.code];
     if (!d) return;
     e.preventDefault();
     if (state !== 'playing' || e.repeat) return;
 
-    const nx = target.x + d[0] * STEP_X;          // lateral: paso corto
-    const nz = target.z + d[1] * ROW;             // adelante/atrás: una fila
+    const nx = target.x + d[0] * STEP_X;          
+    const nz = target.z + d[1] * ROW;             
 
-    // Límite lateral (si la corriente te sacó, solo puedes volver hacia adentro)
+
     if (d[0] && Math.abs(nx) > SIDE && Math.abs(nx) >= Math.abs(target.x)) return;
-    // Solo se puede retroceder 3 filas desde tu mejor fila
+
     if (d[1] && nz > -Math.max(0, score - 3) * ROW) return;
 
     target.x = nx;
@@ -241,29 +242,62 @@ addEventListener('keydown', (e) => {
     player.rotation.y = Math.atan2(-d[0], -d[1]);
 });
 
-// --- Menú ---
+// Menú y Game over 
 const menu = document.getElementById('menu');
+const gameoverEl = document.getElementById('gameover');
 const hud = document.getElementById('hud');
 const scoreEl = document.getElementById('score');
 const bestEl = document.getElementById('best');
+const finalScoreEl = document.getElementById('finalScore');
+const recordMsgEl = document.getElementById('recordMsg');
 
-document.querySelectorAll('#menu button').forEach((btn) => {
-    btn.onclick = () => {
-        level = Number(btn.dataset.level);
-        reset();
-        menu.classList.add('hidden');
-        hud.classList.remove('hidden');
-        state = 'playing';
-    };
-});
+function startLevel(n) {
+    document.activeElement?.blur();               
+    level = n;
+    reset();
+    menu.classList.add('hidden');
+    gameoverEl.classList.add('hidden');
+    hud.classList.remove('hidden');
+    state = 'playing';
+}
+
+function gameOver() {
+    const previous = best[level];
+    best[level] = Math.max(previous, score);
+    state = 'gameover';
+
+    let msg, isRecord = false;
+    if (score > previous) {
+        msg = '¡Nuevo récord!';
+        isRecord = true;
+    } else if (score > 0 && score === previous) {
+        msg = 'Igualaste tu récord';
+
+    } else {
+        msg = '¡Intenta avanzar más!';
+    }
+
+    finalScoreEl.textContent = `Puntaje: ${score} · Récord: ${best[level]}`;
+    recordMsgEl.textContent = msg;
+    recordMsgEl.classList.toggle('record', isRecord);
+    bestEl.textContent = best[level];
+    gameoverEl.classList.remove('hidden');
+}
 
 function showMenu() {
     state = 'menu';
     menu.classList.remove('hidden');
+    gameoverEl.classList.add('hidden');
     hud.classList.add('hidden');
 }
 
-// --- Bucle principal ---
+document.querySelectorAll('#menu button').forEach((btn) => {
+    btn.onclick = () => startLevel(Number(btn.dataset.level));
+});
+document.getElementById('retry').onclick = () => startLevel(level);
+document.getElementById('toMenu').onclick = showMenu;
+
+// Bucle principal 
 const clock = new THREE.Clock();
 reset();                                          
 
