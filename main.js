@@ -26,13 +26,33 @@ addEventListener('resize', () => {
 // Materiales y geometrías 
 const ROW = 2;                                    // alto de cada fila = tamaño del paso
 const mat = (color) => new THREE.MeshStandardMaterial({ color });
-const M = { grass: mat(0x66bb6a), road: mat(0x424242), water: mat(0x1e88e5), log: mat(0x8d6e63), glass: mat(0xcfe8ff) };
+const M = { grass: mat(0x66bb6a), road: mat(0x424242), water: mat(0x1976d2), log: mat(0x8d6e63), glass: mat(0xcfe8ff) };
 const carColors = [0xe53935, 0x1e88e5, 0xfdd835, 0x8e24aa, 0xff7043].map(mat);
 
 const stripGeo = new THREE.PlaneGeometry(80, ROW).rotateX(-Math.PI / 2);
 const bodyGeo = new THREE.BoxGeometry(1.8, 0.5, 1);
 const cabinGeo = new THREE.BoxGeometry(0.9, 0.4, 0.85);
-const logGeo = new THREE.CylinderGeometry(0.55, 0.55, 1, 12).rotateZ(Math.PI / 2);
+
+// Troncos, agua y orillas (nivel 2) 
+const logGeos = {};
+const getLogGeo = (len) => (logGeos[len] ||= new THREE.CylinderGeometry(0.55, 0.55, len, 12).rotateZ(Math.PI / 2));
+const foamGeos = {};
+const getFoamGeo = (len) => (foamGeos[len] ||= new THREE.PlaneGeometry(len + 0.8, 1.5).rotateX(-Math.PI / 2));
+const endGeo = new THREE.CircleGeometry(0.5, 12).rotateY(Math.PI / 2);
+const knotGeo = new THREE.SphereGeometry(0.12, 8, 8);
+const endMat = new THREE.MeshStandardMaterial({ color: 0xd7b98e, side: THREE.DoubleSide });
+const knotMat = mat(0x5d4037);
+const foamMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 });
+
+const stripeGeo = new THREE.PlaneGeometry(1, 0.07).rotateX(-Math.PI / 2);
+const stripeMat = new THREE.MeshBasicMaterial({ color: 0x90caf9, transparent: true, opacity: 0.55 });
+
+const edgeGeo = new THREE.PlaneGeometry(80, 0.4).rotateX(-Math.PI / 2);
+const sandMat = mat(0xd9c28f);
+const rockGeo = new THREE.DodecahedronGeometry(0.25);
+const rockMat = mat(0x8d8d8d);
+const reedGeo = new THREE.CylinderGeometry(0.025, 0.03, 1, 5).translate(0, 0.5, 0);
+const reedMat = mat(0x7cb342);
 
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(300, 300).rotateX(-Math.PI / 2), M.grass);
@@ -175,10 +195,66 @@ function makeCar(dir, length = 1.8) {
 }
 
 function makeLog(length) {
-    const log = new THREE.Mesh(logGeo, M.log);
-    log.scale.x = length;
+    const log = new THREE.Group();
+    log.add(new THREE.Mesh(getLogGeo(length), M.log));
+
+    for (const s of [-1, 1]) {                    // puntas claras
+        const end = new THREE.Mesh(endGeo, endMat);
+        end.position.x = s * (length / 2 + 0.005);
+        log.add(end);
+    }
+    for (let k = 0; k < 2; k++) {                 // nudos
+        const knot = new THREE.Mesh(knotGeo, knotMat);
+        knot.position.set((Math.random() - 0.5) * (length - 1), 0.5, (Math.random() < 0.5 ? -1 : 1) * 0.25);
+        knot.scale.set(1, 0.6, 1);
+        log.add(knot);
+    }
+    const foam = new THREE.Mesh(getFoamGeo(length), foamMat);   // espuma alrededor
+    foam.position.y = 0.47;
+    log.add(foam);
+
     log.position.y = -0.45;
     return log;
+}
+
+// Orillas: franja de arena, juncos y rocas en las filas de césped del río
+function decorateBank(group, i) {
+    for (const s of i >= 2 ? [-1, 1] : i === 1 ? [-1] : []) {   // solo los lados que tocan el agua
+        const edge = new THREE.Mesh(edgeGeo, sandMat);
+        edge.position.set(0, 0.01, s * 0.8);
+        group.add(edge);
+    }
+    for (let k = 0; k < 14; k++) {                // juncos
+        const reed = new THREE.Mesh(reedGeo, reedMat);
+        reed.position.set((Math.random() - 0.5) * 30, 0, (Math.random() < 0.5 ? -1 : 1) * (0.55 + Math.random() * 0.2));
+        reed.scale.y = 0.7 + Math.random() * 0.8;
+        group.add(reed);
+    }
+    for (let k = 0; k < 5; k++) {                 // rocas
+        const rock = new THREE.Mesh(rockGeo, rockMat);
+        rock.position.set((Math.random() - 0.5) * 30, 0.1, (Math.random() - 0.5) * 1.2);
+        rock.scale.setScalar(0.5 + Math.random());
+        rock.rotation.set(Math.random() * 3, Math.random() * 3, 0);
+        group.add(rock);
+    }
+    for (const side of [-1, 1]) {               // arboles en las orillas
+        const tree = makeTree();
+        tree.position.set(side * (EDGE + Math.random() * 10), 0, (Math.random() - 0.5) * 1.2);
+        group.add(tree);
+    }
+}
+
+// Agua: franjas claras que se mueven con la corriente de la fila
+function addFlow(group, row) {
+    row.stripes = [];
+    const n = Math.ceil(row.period / 6);
+    for (let k = 0; k < n; k++) {
+        const s = new THREE.Mesh(stripeGeo, stripeMat);
+        s.scale.x = 1 + Math.random() * 1.5;
+        s.position.set(-row.period / 2 + k * 6 + Math.random() * 3, 0.011, (Math.random() - 0.5) * 1.5);
+        group.add(s);
+        row.stripes.push(s);
+    }
 }
 
 function makeRow(i) {
@@ -196,6 +272,8 @@ function makeRow(i) {
 
     if (safe) {
         if (level === 1) decorate(group);             // árboles y flores
+        if (level === 2) decorateBank(group, i);          // orillas del río
+        
         return row;
     }
     if (level === 1 && !rows[i - 1].safe) group.add(makeDashes());   // línea entre calles
@@ -219,6 +297,7 @@ function makeRow(i) {
         group.add(thing);
         row.things.push(thing);
     }
+    if (river) addFlow(group, row);                   // franjas de corriente
     return row;
 }
 
@@ -270,6 +349,11 @@ function update(dt) {
             if (t.position.x > row.period / 2) t.position.x -= row.period;
             if (t.position.x < -row.period / 2) t.position.x += row.period;
         }
+        for (const s of row.stripes || []) {              // franjas de agua (mitad de velocidad)
+        s.position.x += row.dir * row.speed * 0.5 * dt;
+        if (s.position.x > row.period / 2) s.position.x -= row.period;
+        if (s.position.x < -row.period / 2) s.position.x += row.period;
+}
     }
 
     // Puntaje y generación de filas nuevas por delante
