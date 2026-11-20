@@ -32,6 +32,8 @@ const KILL_X = SIDE + 2;  // en el río, si la corriente te lleva más allá de 
 const ROWS_AHEAD = 20;    // filas que siempre hay creadas por delante del jugador
 const BACK_LIMIT = 3;     // cuántas filas se puede retroceder
 const EDGE = 12;          // los árboles se colocan más lejos que esto 
+const HOP_HEIGHT = 0.6;   // qué tan alto salta el personaje
+const HOP_TIME = 0.22;    // cuánto dura cada salto 
 
 
 //  3. ELEMENTOS DE LA PÁGINA (index.html)
@@ -115,6 +117,7 @@ let level = 1;              // nivel actual
 let state = 'menu';         // 'menu' | 'playing' | 'gameover'
 let rows = [];              // filas creadas hasta ahora
 let score = 0;              // fila más lejana alcanzada
+let hopT = 1;             // avance del salto: 0 = empieza, 1 = terminado
 const best = { 1: 0, 2: 0 };    // récord de cada nivel 
 
 const world = new THREE.Group();    // aquí viven todas las filas
@@ -354,7 +357,9 @@ function reset() {
     target.set(0, 0, 0);
     player.rotation.y = 0;
     chicken.visible = level === 1;                      // gallina en el nivel 1
-    frog.visible = level === 2;                         // rana en el nivel 2
+    frog.visible = level === 2;
+    
+    hopT = 1;// rana en el nivel 2
 
     scoreEl.textContent = 0;
     bestEl.textContent = best[level];
@@ -420,6 +425,19 @@ function update(dt) {
         const dead = level === 1 ? hitCar(row) : hitWater(row, dt);
         if (dead) gameOver();
     }
+}
+
+// Animación de salto: el personaje sube y baja, y se estira un poco en el aire
+function animateHop(dt) {
+    const who = level === 1 ? chicken : frog;       // el personaje visible
+    if (hopT < 1) hopT = Math.min(hopT + dt / HOP_TIME, 1);
+
+    const s = Math.sin(hopT * Math.PI);             // 0 → 1 → 0 durante el salto
+    const stretch = 1 + 0.2 * s;                    // más alto en el aire
+    const squash = 1 / Math.sqrt(stretch);          // y más angosto, para conservar el volumen
+
+    who.position.y = s * HOP_HEIGHT;
+    who.scale.set(squash, stretch, squash);
 }
 
 //  11. PANTALLAS: MENÚ Y GAME OVER
@@ -509,6 +527,7 @@ addEventListener('keydown', (e) => {
     target.x = nx;
     target.z = nz;
     player.rotation.y = Math.atan2(-d[0], -d[1]);                // mira hacia donde va
+    hopT = 0;                                                    // empieza un salto
 });
 
 
@@ -522,6 +541,7 @@ renderer.setAnimationLoop(() => {
     const dt = Math.min(clock.getDelta(), 0.05);                 // tiempo desde el último fotograma
 
     player.position.lerp(target, 1 - Math.exp(-20 * dt));        // desliza al personaje hacia su casilla
+    animateHop(dt);
     if (state === 'playing') update(dt);                         // la lógica solo corre al jugar
 
     // El suelo y la cámara siguen al jugador
