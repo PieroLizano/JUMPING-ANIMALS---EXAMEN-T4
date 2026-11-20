@@ -55,6 +55,12 @@
         .card .icon { font-size: 3.2rem; }
         .card .name { font-size: 1.35rem; font-weight: 700; color: var(--gold); }
         .card .desc { font-size: 0.98rem; opacity: 0.9; }
+        .card .record {
+            margin-top: 8px; padding: 4px 14px;
+            font-size: 0.98rem; font-weight: 600;
+            background: rgba(0, 0, 0, 0.3); border-radius: 999px;
+        }
+        .card .record b { color: var(--gold); }
 
         /* ---------- Controles (menú) ---------- */
         .controls {
@@ -136,11 +142,13 @@
                 <span class="icon">🐔</span>
                 <span class="name">Nivel 1</span>
                 <span class="desc">La carretera: esquiva carros y camiones</span>
+                <span class="record">🏆 Récord: <b id="menuBest1">0</b></span>
             </button>
             <button class="card" data-level="2">
                 <span class="icon">🐸</span>
                 <span class="name">Nivel 2</span>
                 <span class="desc">El río: salta de tronco en tronco</span>
+                <span class="record">🏆 Récord: <b id="menuBest2">0</b></span>
             </button>
         </div>
         <div class="controls">

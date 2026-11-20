@@ -44,6 +44,10 @@ const scoreEl = document.getElementById('score');
 const bestEl = document.getElementById('best');
 const finalScoreEl = document.getElementById('finalScore'); // puntaje final en Game over
 const recordMsgEl = document.getElementById('recordMsg');   // mensaje de récord
+const menuBest = {                                          // récord de cada tarjeta del menú
+    1: document.getElementById('menuBest1'),
+    2: document.getElementById('menuBest2'),
+};
 
 
 
@@ -118,7 +122,23 @@ let state = 'menu';         // 'menu' | 'playing' | 'gameover'
 let rows = [];              // filas creadas hasta ahora
 let score = 0;              // fila más lejana alcanzada
 let hopT = 1;             // avance del salto: 0 = empieza, 1 = terminado
-const best = { 1: 0, 2: 0 };    // récord de cada nivel 
+
+//  Récord guardado en el navegador 
+const SAVE_KEY = 'jumpingAnimals.best';
+
+function loadBest() {
+    try {
+        return { 1: 0, 2: 0, ...JSON.parse(localStorage.getItem(SAVE_KEY)) };
+    } catch {
+        return { 1: 0, 2: 0 };     // si no hay datos guardados o hay un error, empieza en 0
+    }
+}
+
+function saveBest() {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(best)); } catch { /* sin almacenamiento */ }
+}
+
+const best = loadBest();            // récord de cada nivel
 
 const world = new THREE.Group();    // aquí viven todas las filas
 scene.add(world);
@@ -457,6 +477,7 @@ function startLevel(n) {
 function gameOver() {
     const previous = best[level];
     best[level] = Math.max(previous, score);
+    saveBest();
     state = 'gameover';
 
     let msg, isRecord = false;
@@ -484,6 +505,7 @@ function showMenu() {
     menu.classList.remove('hidden');
     gameoverEl.classList.add('hidden');
     hud.classList.add('hidden');
+    updateMenuRecords();
 }
 
 // Botones de las pantallas
@@ -492,6 +514,12 @@ document.querySelectorAll('#menu button').forEach((btn) => {
 });
 document.getElementById('retry').onclick = () => startLevel(level);   // jugar de nuevo
 document.getElementById('toMenu').onclick = showMenu;                  // volver al menú
+
+// Muestra en las tarjetas del menú el mejor récord de cada nivel
+function updateMenuRecords() {
+    menuBest[1].textContent = best[1];
+    menuBest[2].textContent = best[2];
+}
 
 
 
@@ -535,6 +563,7 @@ addEventListener('keydown', (e) => {
 const clock = new THREE.Clock();
 const camGoal = new THREE.Vector3();    // posición a la que debe ir la cámara
 
+updateMenuRecords();
 reset();                                // crea el nivel 1 para verlo detrás del menú
 
 renderer.setAnimationLoop(() => {
