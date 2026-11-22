@@ -117,6 +117,10 @@
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
         }
         #hud b { color: var(--gold); }
+
+        .danger { position: fixed; top: 0; bottom: 0; width: 28%; pointer-events: none; opacity: 0; }
+        .danger.left  { left: 0;  background: linear-gradient(to right, rgba(255, 40, 40, 0.75), transparent); }
+        .danger.right { right: 0; background: linear-gradient(to left,  rgba(255, 40, 40, 0.75), transparent); }
     </style>
 
     <!-- El importmap SIEMPRE antes del script del módulo -->
@@ -130,6 +134,8 @@
     </script>
 </head>
 <body>
+    <div id="dangerL" class="danger left"></div>
+    <div id="dangerR" class="danger right"></div>
     <!-- Puntaje y récord durante la partida -->
     <div id="hud" class="hidden">Puntaje: <b id="score">0</b> · Récord: <b id="best">0</b></div>
 
