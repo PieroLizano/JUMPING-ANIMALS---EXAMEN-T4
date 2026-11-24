@@ -1,10 +1,9 @@
-//  NIVEL 1: LA CARRETERA
-//  Una gallina cruza calles con carros y camiones.
 import * as THREE from 'three';
 import { ROW, player, mat, grassMat, stripGeo, slide } from '../shared.js';
 
+
 //  1. AJUSTES
-const EDGE = 12;    // los árboles se colocan más lejos que esto (fuera de la zona de juego)
+const EDGE = 12;    
 
 //  2. MATERIALES Y FORMAS
 //  Se crean una sola vez y se reutilizan en todas las filas.
@@ -22,7 +21,7 @@ const lampGeo = new THREE.BoxGeometry(0.05, 0.12, 0.2);                      // 
 const lampMat = new THREE.MeshBasicMaterial({ color: 0xffff99 });
 const cargoMat = mat(0xeeeeee);                                              // caja del camión
 
-// Decoración 
+// Decoración (árboles, flores y línea de la calle)
 const trunkGeo = new THREE.CylinderGeometry(0.15, 0.2, 0.8, 6);
 const crownGeo = new THREE.ConeGeometry(0.8, 1.8, 7);
 const flowerGeo = new THREE.SphereGeometry(0.08, 6, 6);
@@ -35,6 +34,7 @@ const dashMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
 
 //  3. CONSTRUCCIÓN DE OBJETOS
+
 // Carros y camiones
 function makeCar(dir, length = 1.8) {
     const truck = length > 2;
@@ -56,7 +56,7 @@ function makeCar(dir, length = 1.8) {
     }
 
     const wheelXs = truck ? [-length / 2 + 0.4, 0, length / 2 - 0.4] : [-0.6, 0.6];
-    for (const x of wheelXs) {                          
+    for (const x of wheelXs) {                          // ruedas
         for (const z of [-0.5, 0.5]) {
             const wheel = new THREE.Mesh(tireGeo, tireMat);
             wheel.position.set(x, 0.22, z);
@@ -64,13 +64,13 @@ function makeCar(dir, length = 1.8) {
         }
     }
 
-    for (const z of [-0.3, 0.3]) {                      
+    for (const z of [-0.3, 0.3]) {                      // faros delanteros
         const lamp = new THREE.Mesh(lampGeo, lampMat);
         lamp.position.set(length / 2 + 0.01, 0.5, z);
         car.add(lamp);
     }
 
-    car.rotation.y = dir === 1 ? 0 : Math.PI;           
+    car.rotation.y = dir === 1 ? 0 : Math.PI;           // el frente apunta hacia donde va
     return car;
 }
 
@@ -86,7 +86,7 @@ function makeTree() {
     return tree;
 }
 
-// Árboles a los lados y flores en el césped
+// Árboles y flores 
 function decorate(group) {
     for (const side of [-1, 1]) {
         const n = 2 + Math.floor(Math.random() * 3);
@@ -103,7 +103,7 @@ function decorate(group) {
     }
 }
 
-// Línea blanca discontinua entre dos calles seguidas
+// Línea blanca 
 function makeDashes() {
     const dashes = new THREE.InstancedMesh(dashGeo, dashMat, 30);
     const m = new THREE.Matrix4();
@@ -115,30 +115,32 @@ function makeDashes() {
 }
 
 
+
 //  4. GENERACIÓN DE FILAS
-// Crea la fila i: césped (zona segura) o calle con carros y camiones
+
 function makeRow(i, prev) {
     const group = new THREE.Group();
 
-    // Las 2 primeras filas son seguras
+
     const safe = i < 2 || (!prev.safe && Math.random() < 0.3);
     const row = { group, safe, things: [] };
 
     group.add(new THREE.Mesh(stripGeo, safe ? grassMat : roadMat));
 
+    // Filas seguras
     if (safe) {
         decorate(group);
         return row;
     }
-    if (!prev.safe) group.add(makeDashes());            // línea entre dos calles seguidas
+    if (!prev.safe) group.add(makeDashes());            
 
-    // Calle: vehículos que van de lado a lado
-    row.dir = i % 2 ? 1 : -1;                           // alterna el sentido en cada fila
-    row.speed = 5 + Math.random() * 3 + Math.min(i * 0.06, 5);   // más rápido con la distancia
+    // Calle
+    row.dir = i % 2 ? 1 : -1;                           
+    row.speed = 5 + Math.random() * 3 + Math.min(i * 0.06, 5);   
     const len = Math.random() < 0.3 ? 3.2 : 1.8;        
-    const spacing = len + 6 + Math.random() * 6;        // separación entre vehículos
+    const spacing = len + 6 + Math.random() * 6;        
     const count = Math.ceil(50 / spacing);
-    row.period = count * spacing;                       
+    row.period = count * spacing;                      
     const offset = Math.random() * spacing;
 
     for (let k = 0; k < count; k++) {
@@ -150,6 +152,7 @@ function makeRow(i, prev) {
     }
     return row;
 }
+
 
 
 //  5. MOVIMIENTO Y REGLAS
@@ -167,15 +170,14 @@ function checkLoss(row) {
 }
 
 
+
 //  6. LO QUE OFRECE ESTE NIVEL A main.js
 export const level1 = {
     riding: null,               
-    jump: null,                
-    reset() {},                
+    jump: null,                 
+    reset() {},                 
     makeRow,
     update,
     checkLoss,
     tryJump() { return false; },
-    lateUpdate() {},
-    clearWarnings() {},
 };
