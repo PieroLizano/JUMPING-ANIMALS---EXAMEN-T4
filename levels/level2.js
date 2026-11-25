@@ -4,7 +4,7 @@ import { ROW, SIDE, player, target, hop, mat, grassMat, stripGeo, slide } from '
 
 //  1. AJUSTES 
 
-const KILL_X = SIDE + 10;  // si la corriente te lleva más allá de esto, pierdes
+const KILL_X = SIDE + 6;  // si la corriente te lleva más allá de esto, pierdes
 
 // Salto largo de la rana hacia el tronco o nenúfar del costado
 const LONG_HOP_TIME = 0.32;     
@@ -207,19 +207,19 @@ function makeRow(i, prev) {
     }
 
     // Río: troncos o nenúfares que se mueven de lado a lado
-    const pads = Math.random() < 0.35;                  
+    const pads = Math.random() < 0.2;                  
     row.dir = i % 2 ? 1 : -1;                           
     row.speed = 1.5 + Math.random() * 2 + Math.min(i * 0.04, 3);   
     if (pads) row.speed *= 0.85;                       
 
 
     const len = pads ? 1.6 : 2 + Math.floor(Math.random() * 3);    
-    const gap = pads ? 1.5 + Math.random() * 1.5 : 2.5 + Math.random();
+    const gap = pads ? 2.5 + Math.random() * 1.5 : 3.5 + Math.random();
     const spacing = len + gap;
     const count = Math.ceil(50 / spacing);
     row.period = count * spacing;                       
     const offset = Math.random() * spacing;
-    const sinkChance = Math.min(0.15 + i * 0.005, 0.4); 
+    const sinkChance = Math.min(0.08 + i * 0.003, 0.25); 
 
     for (let k = 0; k < count; k++) {
         const thing = pads ? makeLily() : makeLog(len, Math.random() < sinkChance);
