@@ -70,7 +70,7 @@ function makeCar(dir, length = 1.8) {
         car.add(lamp);
     }
 
-    car.rotation.y = dir === 1 ? 0 : Math.PI;           // el frente apunta hacia donde va
+    car.rotation.y = dir === 1 ? 0 : Math.PI;           
     return car;
 }
 
@@ -86,7 +86,7 @@ function makeTree() {
     return tree;
 }
 
-// Árboles y flores 
+// Árboles a los lados y flores en el césped
 function decorate(group) {
     for (const side of [-1, 1]) {
         const n = 2 + Math.floor(Math.random() * 3);
@@ -103,7 +103,7 @@ function decorate(group) {
     }
 }
 
-// Línea blanca 
+// Línea blanca discontinua entre dos calles seguidas
 function makeDashes() {
     const dashes = new THREE.InstancedMesh(dashGeo, dashMat, 30);
     const m = new THREE.Matrix4();
@@ -115,32 +115,32 @@ function makeDashes() {
 }
 
 
-
 //  4. GENERACIÓN DE FILAS
 
+// Crea la fila i: césped (zona segura) o calle con carros y camiones
 function makeRow(i, prev) {
     const group = new THREE.Group();
 
-
+    
     const safe = i < 2 || (!prev.safe && Math.random() < 0.3);
     const row = { group, safe, things: [] };
 
     group.add(new THREE.Mesh(stripGeo, safe ? grassMat : roadMat));
 
-    // Filas seguras
+    // Filas seguras: solo decoración
     if (safe) {
         decorate(group);
         return row;
     }
     if (!prev.safe) group.add(makeDashes());            
 
-    // Calle
-    row.dir = i % 2 ? 1 : -1;                           
+    // Calle: vehículos que van de lado a lado
+    row.dir = i % 2 ? 1 : -1;                          
     row.speed = 5 + Math.random() * 3 + Math.min(i * 0.06, 5);   
     const len = Math.random() < 0.3 ? 3.2 : 1.8;        
-    const spacing = len + 6 + Math.random() * 6;        
+    const spacing = len + 6 + Math.random() * 6;       
     const count = Math.ceil(50 / spacing);
-    row.period = count * spacing;                      
+    row.period = count * spacing;                       
     const offset = Math.random() * spacing;
 
     for (let k = 0; k < count; k++) {
@@ -170,12 +170,11 @@ function checkLoss(row) {
 }
 
 
-
 //  6. LO QUE OFRECE ESTE NIVEL A main.js
 export const level1 = {
     riding: null,               
     jump: null,                 
-    reset() {},                 
+    reset() {},                
     makeRow,
     update,
     checkLoss,

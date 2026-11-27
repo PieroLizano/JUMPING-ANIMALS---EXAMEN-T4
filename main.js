@@ -104,12 +104,12 @@ async function loadCharacter(url, rotationY) {
 
     const box = new THREE.Box3().setFromObject(model);
     const size = box.getSize(new THREE.Vector3());
-    model.scale.setScalar(0.9 / Math.max(size.x, size.y, size.z));      
+    model.scale.setScalar(0.9 / Math.max(size.x, size.y, size.z));      // tamaño
 
     box.setFromObject(model);
     const c = box.getCenter(new THREE.Vector3());
-    model.position.x -= c.x;                                            
-    model.position.y -= box.min.y;                                     
+    model.position.x -= c.x;                                            // centrado
+    model.position.y -= box.min.y;                                      // pies en el suelo
     model.position.z -= c.z;
 
     const holder = new THREE.Group();
@@ -117,11 +117,53 @@ async function loadCharacter(url, rotationY) {
     holder.add(model);
     player.add(holder);
     return holder;
+}      
+
+//Animales disponibles
+const ANIMALS = [
+    { id: 'gallina', file: 'models/gallina.glb', rot: -Math.PI / 2},
+    { id: 'rana',    file: 'models/rana.glb',    rot: -Math.PI },
+    { id: 'cerdo',   file: 'models/cerdo.glb',   rot: Math.PI },
+    { id: 'llama',   file: 'models/llama.glb',   rot: Math.PI },
+    { id: 'conejo',  file: 'models/conejo.glb',  rot: Math.PI },
+];
+
+const holders = {};                     // id → modelo ya cargado
+await Promise.all(ANIMALS.map(async (a) => {
+    try {
+        holders[a.id] = await loadCharacter(a.file, a.rot);
+        holders[a.id].visible = false;
+    } catch (err) {
+        console.warn('No se pudo cargar', a.file, err);
+    }
+}));
+
+// --- Animal elegido (se recuerda en el navegador) ---
+const ANIMAL_KEY = 'jumpingAnimals.animal';
+
+function loadAnimal() {
+    try {
+        const id = localStorage.getItem(ANIMAL_KEY);
+        if (holders[id]) return id;
+    } catch { /* sin almacenamiento */ }
+    return holders.gallina ? 'gallina' : Object.keys(holders)[0];
 }
 
-const chicken = await loadCharacter('models/gallina.glb', -Math.PI / 2);     
-const frog = await loadCharacter('models/rana.glb', -Math.PI );       
+let animal = loadAnimal();              // id del animal elegido
 
+// Muestra solo el animal elegido
+function showAnimal() {
+    for (const id in holders) holders[id].visible = id === animal;
+}
+
+// Cambia el animal, lo guarda y marca su botón en el menú
+function selectAnimal(id) {
+    if (!holders[id]) return;
+    animal = id;
+    try { localStorage.setItem(ANIMAL_KEY, id); } catch { /* sin almacenamiento */ }
+    showAnimal();
+    document.querySelectorAll('.animal').forEach((b) => b.classList.toggle('selected', b.dataset.animal === id));
+}
 
 
 //  6. MUNDO: CREAR FILAS Y EMPEZAR PARTIDA
@@ -149,29 +191,30 @@ function reset() {
     hop.time = HOP_TIME;
     hop.height = HOP_HEIGHT;
     rideY = 0;
-    chicken.visible = level === 1;                      
-    frog.visible = level === 2;                         
+    showAnimal();                                       
 
     scoreEl.textContent = 0;
     bestEl.textContent = best[level];
 }
 
 
-
 //  7. ACTUALIZACIÓN EN CADA FOTOGRAMA
 // Lógica principal del juego 
 
 function update(dt) {
-    current.update(dt, rows);                          
+    current.update(dt, rows);                           
 
+    
     const playerRow = Math.round(-player.position.z / ROW);
     if (playerRow > score) {
         score = playerRow;
         scoreEl.textContent = score;
     }
 
+    
     while (rows.length < score + ROWS_AHEAD) addRow();
 
+    
     const row = rows[playerRow];
     if (row && !row.safe && Math.abs(player.position.z - row.group.position.z) < 0.6) {
         if (current.checkLoss(row)) return gameOver();
@@ -180,10 +223,11 @@ function update(dt) {
 
 // Animación de salto
 function animateHop(dt) {
-    const who = level === 1 ? chicken : frog;          
+    const who = holders[animal];                       
+    if (!who) return;
     if (hop.t < 1) hop.t = Math.min(hop.t + dt / hop.time, 1);
 
-
+    // Altura de apoyo: sobre un tronco se eleva (y baja con él si se hunde)
     const support = current.riding;
     const goal = support ? support.position.y + support.top : (hop.t < 1 ? rideY : 0);
     rideY += (goal - rideY) * (1 - Math.exp(-15 * dt));
@@ -201,7 +245,7 @@ function animateHop(dt) {
 //  8. PANTALLAS: MENÚ Y GAME OVER
 // Empieza el nivel y oculta el menú y el Game over
 function startLevel(n) {
-    document.activeElement?.blur();                     
+    document.activeElement?.blur();                     // evita que Enter/Espacio vuelvan a pulsar un botón
     level = n;
     current = levels[n];
     reset();
@@ -211,7 +255,7 @@ function startLevel(n) {
     state = 'playing';
 }
 
-// Termina la partida
+// Termina la partida: actualiza el récord y muestra el Game over con un mensaje
 function gameOver() {
     const previous = best[level];
     best[level] = Math.max(previous, score);
@@ -232,12 +276,12 @@ function gameOver() {
 
     finalScoreEl.textContent = `Puntaje: ${score} · Récord: ${best[level]}`;
     recordMsgEl.textContent = msg;
-    recordMsgEl.classList.toggle('record', isRecord);   
+    recordMsgEl.classList.toggle('record', isRecord);   // el mensaje de récord sale en dorado
     bestEl.textContent = best[level];
     gameoverEl.classList.remove('hidden');
 }
 
-
+// Muestra en las tarjetas del menú el mejor récord de cada nivel
 function updateMenuRecords() {
     menuBest[1].textContent = best[1];
     menuBest[2].textContent = best[2];
@@ -253,11 +297,16 @@ function showMenu() {
 }
 
 // Botones de las pantallas
-document.querySelectorAll('#menu button').forEach((btn) => {
+document.querySelectorAll('#menu [data-level]').forEach((btn) => {
     btn.onclick = () => startLevel(Number(btn.dataset.level));   
 });
+document.querySelectorAll('.animal').forEach((btn) => {
+    if (!holders[btn.dataset.animal]) btn.classList.add('hidden');  
+    btn.onclick = () => selectAnimal(btn.dataset.animal);           
+});
+selectAnimal(animal);                                               
 document.getElementById('retry').onclick = () => startLevel(level);   
-document.getElementById('toMenu').onclick = showMenu;                  
+document.getElementById('toMenu').onclick = showMenu;                         
 
 
 
@@ -290,10 +339,11 @@ addEventListener('keydown', (e) => {
     }
 
     const nx = target.x + d[0] * STEP_X;                         
-    const nz = target.z + d[1] * ROW;                            
+    const nz = target.z + d[1] * ROW;                          
 
+    // Límite lateral (si la corriente te sacó, solo puedes volver hacia adentro)
     if (d[0] && Math.abs(nx) > SIDE && Math.abs(nx) >= Math.abs(target.x)) return;
-
+    // Solo se puede retroceder unas pocas filas desde la mejor fila
     if (d[1] && nz > -Math.max(0, score - BACK_LIMIT) * ROW) return;
 
     target.x = nx;
@@ -301,7 +351,7 @@ addEventListener('keydown', (e) => {
     player.rotation.y = Math.atan2(-d[0], -d[1]);                
     hop.time = HOP_TIME;
     hop.height = HOP_HEIGHT;
-    hop.t = 0;                                                   
+    hop.t = 0;                                                  
 });
 
 

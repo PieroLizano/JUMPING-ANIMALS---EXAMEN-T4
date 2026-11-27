@@ -20,8 +20,8 @@
         .screen {
             position: fixed; inset: 0;
             display: flex; flex-direction: column;
-            align-items: center; justify-content: center; gap: 22px;
-            padding: 20px; box-sizing: border-box;
+            align-items: center; justify-content: safe center; gap: 16px;
+            padding: 20px; box-sizing: border-box; overflow-y: auto;
             color: white; text-align: center;
             background: radial-gradient(circle at 50% 40%, rgba(20, 45, 30, 0.55), rgba(0, 0, 0, 0.82));
             backdrop-filter: blur(4px);           /* difumina el juego que se ve detrás */
@@ -40,7 +40,7 @@
         /* ---------- Tarjetas de nivel ---------- */
         .cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; }
         .card {
-            width: 230px; padding: 22px 16px;
+            width: 230px; padding: 14px 16px;
             display: flex; flex-direction: column; align-items: center; gap: 6px;
             font-family: inherit; color: white; cursor: pointer;
             background: rgba(255, 255, 255, 0.12);
@@ -52,7 +52,7 @@
             background: rgba(255, 213, 79, 0.22); border-color: var(--gold);
         }
         .card:active { transform: scale(0.98); }
-        .card .icon { font-size: 3.2rem; }
+        .card .icon { font-size: 2.6rem; }
         .card .name { font-size: 1.35rem; font-weight: 700; color: var(--gold); }
         .card .desc { font-size: 0.98rem; opacity: 0.9; }
         .card .record {
@@ -83,6 +83,21 @@
         }
         .or { opacity: 0.7; }
         .label { opacity: 0.9; }
+
+        /* ---------- Selector de animal ---------- */
+        .animals { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+        .animal {
+            display: flex; flex-direction: column; align-items: center; gap: 2px;
+            width: 88px; padding: 8px 4px;
+            font-family: inherit; color: white; cursor: pointer;
+            background: rgba(255, 255, 255, 0.12);
+            border: 2px solid rgba(255, 255, 255, 0.28); border-radius: 16px;
+            transition: transform 0.15s, background 0.15s, border-color 0.15s;
+        }
+        .animal .emoji { font-size: 1.9rem; line-height: 1.1; }
+        .animal .label { font-size: 0.85rem; font-weight: 600; }
+        .animal:hover { transform: translateY(-3px); background: rgba(255, 213, 79, 0.2); }
+        .animal.selected { border-color: var(--gold); background: rgba(255, 213, 79, 0.28); }
 
         /* ---------- Botones (Game over) ---------- */
         .btn {
@@ -136,16 +151,24 @@
     <!-- Menú de niveles -->
     <div id="menu" class="screen">
         <h1 class="title">Jumping Animals</h1>
+        <p class="subtitle">Elige tu animal</p>
+        <div class="animals">
+            <button class="animal" data-animal="gallina"><span class="emoji">🐔</span><span class="label">Gallina</span></button>
+            <button class="animal" data-animal="rana"><span class="emoji">🐸</span><span class="label">Rana</span></button>
+            <button class="animal" data-animal="cerdo"><span class="emoji">🐷</span><span class="label">Cerdo</span></button>
+            <button class="animal" data-animal="llama"><span class="emoji">🦙</span><span class="label">Llama</span></button>
+            <button class="animal" data-animal="conejo"><span class="emoji">🐰</span><span class="label">Conejo</span></button>
+        </div>
         <p class="subtitle">Elige un nivel</p>
         <div class="cards">
             <button class="card" data-level="1">
-                <span class="icon">🐔</span>
+                <span class="icon">🛣️</span>
                 <span class="name">Nivel 1</span>
                 <span class="desc">La carretera: esquiva carros y camiones</span>
                 <span class="record">🏆 Récord: <b id="menuBest1">0</b></span>
             </button>
             <button class="card" data-level="2">
-                <span class="icon">🐸</span>
+                <span class="icon">🌊</span>
                 <span class="name">Nivel 2</span>
                 <span class="desc">El río: salta de tronco en tronco</span>
                 <span class="record">🏆 Récord: <b id="menuBest2">0</b></span>
